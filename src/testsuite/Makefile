@@ -18,7 +18,7 @@
 ###############################################################################
 
 # handin info
-TEAM = `whoami`
+TEAM = dkj755
 VERSION = `date +%Y%m%d%H%M%S`
 PROJ = kma
 
@@ -59,7 +59,7 @@ analyze:
 test-reg: handin
 	HANDIN=`pwd`/${TEAM}-${VERSION}-${PROJ}.tar.gz;\
 	cd testsuite;\
-	bash ./run_testcase.sh $${HANDIN};
+	bash ./run_testcase.sh $${HANDIN} ${SHELL_ARCH};
 
 start-vm:
 	VBoxManage startvm ${VM_NAME} --type headless
@@ -105,5 +105,5 @@ leak: $(TARGET)
 
 clean:
 	${RM} -f ${PROGS} kma_competition kma_output.dat kma_output.png kma_waste.png
-	${RM} -f *.o *~ *.gch *.dSYM ${TEAM}*.tar ${TEAM}*.tar.gz
+	${RM} -f *.o *~ *.gch ${TEAM}*.tar ${TEAM}*.tar.gz
 
