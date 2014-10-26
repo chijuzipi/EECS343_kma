@@ -105,5 +105,5 @@ leak: $(TARGET)
 
 clean:
 	${RM} -f ${PROGS} kma_competition kma_output.dat kma_output.png kma_waste.png
-	${RM} -f *.o *~ *.gch *.dSYM ${TEAM}*.tar ${TEAM}*.tar.gz
+	${RM} -f -r *.o *~ *.gch *.dSYM ${TEAM}*.tar ${TEAM}*.tar.gz
 

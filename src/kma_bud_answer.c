@@ -196,15 +196,17 @@ deinit_free_list(void)
     free_list = NULL;
 }
 
-void
-init_free_list(void)
+/*  */
+void init_free_list(void)
 {
     int size = 0;
     int offset = 0;
-    //this is where we should be bringing down the initial control page
+    
     kpage_t* page = get_page();
     // first buffer just points to a size list and a page counter
-    buffer_t* top = page->ptr + offset;
+    //FIXME
+    //buffer_t* top = page->ptr + offset;
+    buffer_t* top = page->ptr;
     offset += sizeof(buffer_t);
     top->next_buffer = page->ptr + offset;
     top->page = page;
@@ -249,8 +251,7 @@ choose_block_size(kma_size_t size)
     return -1;
 }
 
-buffer_t*
-search_for_buffer(kma_size_t size)
+buffer_t* search_for_buffer(kma_size_t size)
 {
     buffer_t* top = free_list;
     while(top != NULL)
@@ -317,8 +318,6 @@ remove_buf_from_free_list(buffer_t* size_header)
         size_header->next_buffer->next_buffer->prev_buffer = size_header;
     size_header->next_buffer = size_header->next_buffer->next_buffer;
 }
-
-
 
 void
 kma_free(void* ptr, kma_size_t size)
