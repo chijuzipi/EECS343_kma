@@ -129,7 +129,7 @@ init_page(kma_page_t *page) {
 	//add block ptr to pagehead
 	pagehead -> page_count = 0;
 	pagehead -> block_count = 0;
-	rm_block * first_block = (rm_block*)((long int)pagehead + sizeof(rm_page_head));
+	//rm_block * first_block = (rm_block*)((long int)pagehead + sizeof(rm_page_head));
 
 	//first_block -> size = PAGESIZE - sizeof(rm_page_head);
 
