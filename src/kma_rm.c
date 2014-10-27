@@ -79,9 +79,6 @@ void add_block (void* addr, int size);
 
 void remove_block (void* addr);
 
-//void merge(rm_page_head * page);
-
-//void delete_page();
 /************External Declaration*****************************************/
 
 /**************Implementation***********************************************/
@@ -103,17 +100,6 @@ kma_malloc(kma_size_t size)
 
   rm_page_head* page = BASEADDR(first_fit);
   (page -> block_count) ++;
-  //rm_page_head* page = find_page(first_fit);
-  /*
-  if (page == NULL) {
-  	printf("no page contain first_fit!\n");
-  	return;
-  }
-  */
-  //add(first_fit, size, page);
-
-  //rm_page_head *current_page;
-  //current_page =  
 
   return first_fit;
 }
@@ -129,25 +115,11 @@ init_page(kma_page_t *page) {
 	//add block ptr to pagehead
 	pagehead -> page_count = 0;
 	pagehead -> block_count = 0;
-	//rm_block * first_block = (rm_block*)((long int)pagehead + sizeof(rm_page_head));
-
-	//first_block -> size = PAGESIZE - sizeof(rm_page_head);
 
 	pagehead -> first_free_block = (rm_block*)((long int)pagehead + sizeof(rm_page_head));
 
-	//pagehead -> next_page = NULL;
 	add_block(((void*)(pagehead -> first_free_block)),(PAGESIZE - sizeof(rm_page_head)));
 
-	/*
-	//add to page list
-	if (page_entry != NULL) {
-		rm_page_head *cur = page_entry -> ptr;
-		while(cur -> next_page != NULL) {
-			cur = cur -> next_page;
-		}
-		cur -> next_page = pagehead;
-	}
-	*/
 }
 
 void*
@@ -302,50 +274,6 @@ kma_free(void* ptr, kma_size_t size)
     totalRequests-=size;
   #endif
 }
-/*
-void merge(rm_page_head * page) {
-	rm_block* cur = page -> first_free_block;
-	while (cur -> next != NULL) {
-		if ((void*)cur + cur -> size >= cur -> next) {
-			rm_block* cur_next = cur -> next;
-			cur -> size = cur -> size + cur_next -> size;
-			cur -> next = cur_next -> next;
-			cur_next -> prev = cur;
-		}
-		else cur = cur -> next;
-	}
-	rm_block* first_block = page -> first_free_block;
-	if (first_block -> size == PAGESIZE - sizeof(rm_page_head))
-		page -> first_free_block = NULL;
-}
-
-void delete_page() {
-	rm_page_head* curpage = (rm_page_head*) page_entry -> ptr;
-	rm_page_head* prevpage = curpage;
-	while (curpage != NULL) {
-		if (curpage -> first_free_block == NULL){
-			if (curpage == (rm_page_head*)(page_entry -> ptr)) {
-				page_entry -> ptr = curpage -> next_page;
-				prevpage = curpage;
-				rm_page_head* tmp = curpage;
-				curpage = curpage -> next_page;
-				free_page((*tmp).this);
-			}
-			else {
-				rm_page_head* tmp = curpage;
-				prevpage -> next_page = curpage -> next_page;
-				curpage = curpage -> next_page;
-				free_page((*tmp).this);
-			}
-		}
-		else{
-			prevpage = curpage;
-			curpage = curpage -> next_page;
-		}
-	}
-}
-
-*/
 #endif // KMA_RM
 
 
