@@ -66,10 +66,9 @@ typedef struct bufferT
 
 /************Global Variables*********************************************/
 static buffer_t* buffer_entry = NULL;
-const int MINBLOCKSIZE = 32;
+const int MINBLOCKSIZE = 16;
 
 /************Function Prototypes******************************************/
-kma_size_t choose_block_size(kma_size_t);
 
 void remove_buffer_list(void);
 
@@ -91,46 +90,35 @@ void*
 kma_malloc(kma_size_t size)
 {
     if(buffer_entry == NULL)
-        init_buffer_list();
-    kma_size_t block_size = choose_block_size(size);
-    if(block_size != -1)
-        return alloc_block(block_size);
-    return NULL;
+      init_buffer_list();
+    return alloc_block(size);
 }
 
-/* Go through buffer_list until block_size is found. Then find first buffer_t
+/* Go through header_list until apporiated size is found. Then find first buffer_t
  * on free list, take it off free list and return its ptr + sizeof(buffer_t*)
  */
-void* alloc_block(kma_size_t block_size)
-{
-    buffer_t* top = buffer_entry;
-    while(top->size < block_size)
-        top = top->next_size;
-    buffer_t* buf = top->next_buffer;
-    if(buf == NULL)
-    {
-        buf = make_buffers(top->size);
-        //if no more buffer can be made
-        if(buf == NULL)
-          return NULL;
-    }
-
-    top->next_buffer = buf->next_buffer;
-    //when the buffer is allocated, the pointer point to the size header
-    buf->next_buffer = top; 
-    return ((void*)buf + sizeof(buffer_t));
-}
-
-kma_size_t choose_block_size(kma_size_t size)
+void* alloc_block(kma_size_t size)
 {
     int test_size = MINBLOCKSIZE;
+    buffer_t* top = buffer_entry;
+    top = top -> next_size;
     while(test_size <= PAGESIZE)
     {
-        if(test_size >= (size + sizeof(buffer_t)))
-            return test_size;
+        if(test_size >= (size + sizeof(buffer_t))){
+          buffer_t* buf = top->next_buffer;
+          if(buf == NULL)
+            buf = make_buffers(top->size);
+
+          top->next_buffer = buf->next_buffer;
+          //when the buffer is allocated, the pointer point to the size header
+          buf->next_buffer = top; 
+          return ((void*)buf + sizeof(buffer_t));
+        }
+          
         test_size *= 2;
+        top = top->next_size;
     }
-    return -1;
+    return NULL;
 }
 
 void init_buffer_list(void)
