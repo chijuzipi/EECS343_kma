@@ -23,7 +23,7 @@ echo;
 
 # Untar sources
 echo "UNTAR";
-#cd ${TMP} || { cleanUp; exit 1; }
+cd ${TMP} || { cleanUp; exit 1; }
 tar xvfz ${TARGZ} || { cleanUp; exit 1; }
 
 echo;
