@@ -65,8 +65,8 @@ typedef struct bufferT
 } buffer_t;
 
 /************Global Variables*********************************************/
-const int MINBLOCKSIZE = 16;
 static buffer_t* buffer_entry = NULL;
+const int MINBLOCKSIZE = 16;
 
 /************Function Prototypes******************************************/
 

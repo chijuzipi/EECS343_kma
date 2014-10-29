@@ -258,21 +258,13 @@ kma_free(void* ptr, kma_size_t size)
       if(last_page == first_page){
 		run = 0;
 		page_entry = NULL;
-  		#ifdef LOGGING
-      		printf("%f\n",totalUtil/(float)numrequests);
-    	#endif
       }
 
-      // printf("1\n");
       free_page(last_page -> this);
-      // printf("2\n");
       if(page_entry != NULL)
 		first_page -> page_count -= 1;
     }
   }
-  #ifdef LOGGING
-    totalRequests-=size;
-  #endif
 }
 #endif // KMA_RM
 
