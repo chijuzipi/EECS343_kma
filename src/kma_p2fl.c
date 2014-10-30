@@ -55,6 +55,7 @@
  *  variables should be in all lower case. When initializing
  *  structures and arrays, line everything up in neat columns.
  */
+#define MINBLOCKSIZE 16
 
 typedef struct bufferT
 {
@@ -65,7 +66,6 @@ typedef struct bufferT
 } buffer_t;
 
 /************Global Variables*********************************************/
-const int MINBLOCKSIZE = 16;
 static buffer_t* buffer_entry = NULL;
 
 /************Function Prototypes******************************************/
@@ -112,6 +112,7 @@ void* alloc_block(kma_size_t size)
           top->next_buffer = buf->next_buffer;
           //when the buffer is allocated, the pointer point to the size header
           buf->next_buffer = top; 
+          ((buffer_t*)(buf->page->ptr))->size += test_size;
           return ((void*)buf + sizeof(buffer_t));
         }
           
@@ -158,7 +159,7 @@ buffer_t* make_buffers(kma_size_t size)
     buffer_t* top = page->ptr;
 
     top->next_size = NULL;
-    top->size = size;
+    top->size = 0;
     top->page = page;
     int offset = size;
     buffer_t* current;
@@ -192,8 +193,11 @@ kma_free(void* ptr, kma_size_t size)
     buf->next_buffer = size_header->next_buffer;
     size_header->next_buffer = buf;
 
+    ((buffer_t*)(buf->page->ptr))->size -= size_header->size;
+    
     //if this is the last free buffer in the buffer list
-    if(last_buf(size_header, buf->page))
+    //if(last_buf(size_header, buf->page))
+    if(((buffer_t*)(buf->page->ptr))->size == 0)
         //free the page associated with the particular size header
         free_page_from_sizelist(size_header, buf->page);
     //if no available buffer in the array  
