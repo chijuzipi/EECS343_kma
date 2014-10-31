@@ -51,12 +51,12 @@
  *  structures and arrays, line everything up in neat columns.
  */
 #define MINBUFSIZE 32 
-#define NUMBEROFBUF PAGESIZE / MINBUFSIZE
+#define NUMBERBUF PAGESIZE / MINBUFSIZE
 
 typedef struct {
   kma_page_t* next_page;
   uint8_t large;
-  uint16_t longest_length[2 * NUMBEROFBUF - 1];
+  uint16_t longest_length[2 * NUMBERBUF - 1];
 } page_header_t;
 
 /************Global Variables*********************************************/
@@ -64,10 +64,14 @@ kma_page_t* first_page = NULL;
 
 /************Function Prototypes******************************************/
 void init_header(kma_page_t*);
-kma_page_t* find_page(kma_size_t);
-kma_page_t* find_free_page(void*);
-unsigned int real_size(unsigned int, unsigned int);
-void remove_page(kma_page_t*);
+
+kma_page_t* search_page(kma_size_t);
+
+kma_page_t* search_free_page(void*);
+
+kma_size_t real_size(int, kma_size_t);
+
+void delete_page(kma_page_t*);
 
 //utility functions
 kma_size_t get_round(kma_size_t);
@@ -81,14 +85,25 @@ int get_larger(int, int);
 	
 /************External Declaration*****************************************/
 
-/**************Implementation***********************************************/
+/**************Implementation**********************************************/
 
-//utility functions
+/**************utilization function****************************************/
 int get_larger(int x, int y){
   if (x > y)
     return x;
   else
     return y;
+}
+
+kma_size_t get_round(kma_size_t size)
+{
+  size = size | (size >> 1);
+  size = size | (size >> 2);
+  size = size | (size >> 4);
+  size = size | (size >> 8);
+  size = size | (size >> 16);
+  size += 1;
+  return size;
 }
 
 bool is_powerof2(int x){
@@ -111,22 +126,15 @@ int get_right_child(int x){
   return (x*2+2);
 }
 
-kma_size_t get_round(kma_size_t size)
-{
-  size = size | (size >> 1);
-  size = size | (size >> 2);
-  size = size | (size >> 4);
-  size = size | (size >> 8);
-  size = size | (size >> 16);
-  size += 1;
-  return size;
-}
 
+/**************main algorithm****************************************/
+
+//making a array to track each buffer's size and usage 
 void init_header(kma_page_t* page)
 {
+  int real_length;
   kma_size_t i, node_size = 2 * PAGESIZE;
   kma_size_t offset, pre_filled_offset;
-  int real_length;
 
   page_header_t* page_header;
   page_header = (page_header_t*)(page->ptr);
@@ -135,7 +143,7 @@ void init_header(kma_page_t* page)
 
   pre_filled_offset = sizeof(page_header_t);
 
-  for (i = 0; i < 2 * NUMBEROFBUF - 1; i++)
+  for (i = 0; i < 2 * NUMBERBUF - 1; i++)
   {
     if (is_powerof2(i + 1)) node_size = node_size / 2;
     
@@ -160,7 +168,7 @@ kma_malloc(kma_size_t size)
   kma_page_t* page;
   page_header_t* page_header;
 
-  page = find_page(size);
+  page = search_page(size);
   if (page == NULL)
     return NULL;
   else
@@ -192,13 +200,9 @@ kma_malloc(kma_size_t size)
   offset = get_offset(index, node_size) + node_size - page_header->longest_length[index];
   page_header->longest_length[index] = 0;
 
-  /*printf("ALLOC: Size is %d, offset is %d, index is %d, node_size is %d\n", size, offset, index, node_size);*/
-
-  while (index)
-  {
+  while (index){
     index = get_parent(index);
-    page_header->longest_length[index] = get_larger(page_header->longest_length[get_left_child(index)],
-                                                page_header->longest_length[get_right_child(index)]);
+    page_header->longest_length[index] = get_larger(page_header->longest_length[get_left_child(index)], page_header->longest_length[get_right_child(index)]);
   }
 
   return page->ptr + offset;
@@ -207,16 +211,15 @@ kma_malloc(kma_size_t size)
 void 
 kma_free(void* ptr, kma_size_t size)
 {
-  kma_page_t* page = find_free_page(ptr);
+  kma_page_t* page = search_free_page(ptr);
   page_header_t* page_header = page->ptr;
   kma_size_t left_length, right_length;
   kma_size_t node_size;
   int index = 0;
   int offset;
 
-  if (page_header->large == 1)
-  {
-    remove_page(page);
+  if (page_header->large == 1){
+    delete_page(page);
     return;
   }
   
@@ -231,11 +234,9 @@ kma_free(void* ptr, kma_size_t size)
     node_size = node_size * 2;
 
   page_header->longest_length[index] = (uint16_t)real_size(index, node_size);
+  //printf("FREE: Size is %d, offset is %d, index is %d", size, offset, index);
 
-  /*printf("FREE: Size is %d, offset is %d, index is %d, node_size is %d, longest_length is %d\n", size, offset, index, node_size, page_header->longest_length[index]);*/
-
-  while (index)
-  {
+  while (index){
     index = get_parent(index);
     node_size = node_size * 2;
     left_length = page_header->longest_length[get_left_child(index)];
@@ -248,11 +249,10 @@ kma_free(void* ptr, kma_size_t size)
   }
 
   if (page_header->longest_length[0] == (PAGESIZE - sizeof(page_header_t)))
-    remove_page(page);
+    delete_page(page);
 }
 
-kma_page_t*
-find_page(kma_size_t size)
+kma_page_t* search_page(kma_size_t size)
 {
   kma_page_t* page = first_page;
   page_header_t* page_header;
@@ -260,24 +260,20 @@ find_page(kma_size_t size)
   if ((size + sizeof(kma_page_t*)) > PAGESIZE)
     return NULL;
 
-  if (page == NULL)
-  {
+  if (page == NULL){
     page = get_page();
     init_header(page);
     first_page = page;
     return page;
   }
-  else
-  {
-    while (page != NULL)
-    {
+  else{
+    while (page != NULL){
       page_header = (page_header_t*)page->ptr;
 
       if (page_header->large != 1 && page_header->longest_length[0] >= size)
         return page;
 
-      if (page_header->next_page == NULL)
-      {
+      if (page_header->next_page == NULL){
         page_header->next_page = get_page();
         init_header(page_header->next_page);
         return page_header->next_page;
@@ -290,15 +286,13 @@ find_page(kma_size_t size)
   return NULL;
 }
 
-kma_page_t*
-find_free_page(void* ptr)
+kma_page_t* search_free_page(void* ptr)
 {
   kma_page_t* page = first_page;
   page_header_t* page_header;
   int offset;
 
-  while (page)
-  {
+  while (page){
     page_header = (page_header_t*)(page->ptr);
     offset = ptr - page->ptr;
     if (offset > 0 && offset < PAGESIZE)
@@ -308,37 +302,30 @@ find_free_page(void* ptr)
   return NULL;
 }
 
-unsigned int
-real_size(unsigned int index, unsigned int node_size)
+kma_size_t real_size(int index, kma_size_t node_size)
 {
-  unsigned int size = node_size;
-  unsigned int offset = get_offset(index, node_size);
-  unsigned int occupied_offset = sizeof(page_header_t);
+  kma_size_t size = node_size;
+  int offset = get_offset(index, node_size);
+  int occupied_offset = sizeof(page_header_t);
 
-  if (occupied_offset >= offset)
-  {
+  if (occupied_offset >= offset){
     size = size - (occupied_offset - offset);
   }
   return size;
 }
 
-void
-remove_page(kma_page_t* page)
+void delete_page(kma_page_t* page)
 {
   kma_page_t* current_page = first_page;
   page_header_t* current_header = first_page->ptr;
 
-  if (page->id == current_page->id)
-  {
+  if (page->id == current_page->id){
     first_page = current_header->next_page;
     free_page(page);
   }
-  else
-  {
-    while (current_header->next_page)
-    {
-      if (current_header->next_page->id == page->id)
-      {
+  else{
+    while (current_header->next_page){
+      if (current_header->next_page->id == page->id){
         current_header->next_page = ((page_header_t*)(page->ptr))->next_page;
         free_page(page);
         break;

@@ -1,1 +1,96 @@
+EECS343 Opearting System 
+Project #2, Kernel Memory Allocator
+DOC
+Name: Yu Zhou, Chao Feng
+
+
+Below are comparasion among the algorithms implemented. NOTE: we implemeted P2FL for the extra point part
+
+****************** KMA_RM *****************
+COMPETITION: running KMA_RM on 5.trace
+Competition binary successfully completed the trace
+./kma_competition: Running in competition mode
+Page Requested/Freed/In Use:  1608/ 1608/    0
+Competition average ratio: 2.758934
+Test: PASS
+
+Best time (out of 5 runs): 34.36
+Competition score: 129.156972
+
+Brief design and implementatoin:
+For the rm memory allocate. We have two structs called rm_page_head and rm_block. As
+known as the name, the rm_page_head is a struct for the page head and the rm_block is a struct for the empty block in
+the pages. So based on our design, the first page has a page head and each empty has an block head. We store the first
+block address in the page head, the page pointer in the page head, and the count of the block. In the block head, we
+store the next block pointer and the last block pointer in it in order to help us to find the next empty block. We use
+first fit algorithm in this rm so that the efficiency is not very good. We won't use rm to compete so we haven't pay a
+lot attention to this part.
+
+****************** KMA_BUD *****************
+COMPETITION: running KMA_BUD on 5.trace
+Competition binary successfully completed the trace
+./kma_competition: Running in competition mode
+Page Requested/Freed/In Use: 11115/11115/    0
+Competition average ratio: 0.646888
+Test: PASS
+
+Best time (out of 5 runs): 1.61
+Competition score: 2.651489
+
+Brief design and implementatoin:
+The BUD design is referenced from lecture note and Internet. We use a virtual tree to represent the 
+available size, and give each node a index. In the implementation, we use a array to store the size of
+each node in the tree, and track its uage, with using the index assigned. Since the nature of the Buddy system, if we know 
+the praent index, we can calculate the children indexes, and use the array to retive its size and availability. So
+finding a good spot require transvere of the tree, with each move associate with a little amount of calculation.
+(utility function). The free operation is just updating the array, which should note that not only update the children
+but their ancestors.  
+
+****************** KMA_P2FL *****************
+COMPETITION: running KMA_P2FL on 5.trace
+Competition binary successfully completed the trace
+./kma_competition: Running in competition mode
+Page Requested/Freed/In Use: 10284/10284/    0
+Competition average ratio: 0.628065
+Test: PASS
+
+Best time (out of 5 runs): .10
+Competition score: .162806
+
+Brief design and implementatoin:
+The P2FL is designed according to the principle taught in the class, that for each power of 2 size block, we have  a
+linked buffer list buffer of the size. 
+And with different sizes, we have a size_header list to track them. Each node in the size_header list is linked with
+the buffer list with the designated size blocks. When a request come in, the program first search a fit size from the 
+size_header list, and from the particular size node, link to the buffer list to find a available buffer. 
+If no buffer is available, then the function "make_buffer" is called, which get a new page and format it into the list.  
+We maintained two type of counters. 
+1) the global page counter: every time call get_page(), the counter increase, and every time call free(page), the
+counter decrease. The global counter is to track how many page is in use, and determine if we should free everything. 
+2) the page buffer counter: for every block size, there is a page buffer counter to track the buffer page is still in
+use, if the counter equals 0, it means no request is using the page buffer, then, a free(page) will be called. 
+NOTE: the #2 counter is a design effort we made to speed up the program execution time. The original design is to
+transverse every node in the buffer list and add up the space to see if they sum to page size. But this is proven to be
+too slow as every free opertion will trigger the transverse of the linked list. 
+
+
+**********************************************************************************************************************
+
+From the the comparasion, we can see the RM is the slowest but require fewer pages. This is because everytime a
+malloc operation require transvesring the linked list. It require fewer pages since every page can be used for any
+size request, if the hole size is big enough. 
+
+The BUD is a lot faster since finding of the right fit buffer for a particular size is fast (similar to binary search
+as every time the size divided by 2)
+
+Finally, we found the P2FL is the fastest with high usage efficiency. We think it is because 1) finding the right size
+buffer is fast as the program using the size_header linked list (binary seaerch as next node size is 2* the previous
+one). Once find the right size_header, the very first buffer block linked to the size_header will be provided for use. 
+The make_buffer call is infrequent as one call will consume a whole page. (this does increase the required page number,
+however)
+
+The reason P2FL is faster than BUD in our implementations is because the BUD realies on many calculations to determine
+next node, but P2FL is linked list that does not need such amont of calculations. 
+
+
 
